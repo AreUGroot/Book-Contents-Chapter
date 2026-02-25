@@ -9,9 +9,10 @@
 </head>
 <body>
     <!-- 工具栏 -->
-    <div id="toolbar">
+        <div id="toolbar">
         <div class="toolbar-left">
             <a href="/" class="btn btn-back" title="返回文件列表">&#8592; 返回</a>
+            <span class="toolbar-filepath" title="{{ filepath_display }}">{{ filepath_display }}</span>
             <span class="toolbar-divider"></span>
             <button id="btnExtractToc" class="btn">选取目录页面</button>
             <div id="tocExtractPanel" class="hidden">
@@ -46,8 +47,38 @@
         <!-- 左边栏 -->
         <div id="sidebar">
             <div id="sidebarHeader">
-                <span>目录</span>
-                <button id="btnHideSidebar" class="btn btn-icon" title="隐藏侧边栏">&#10094;</button>
+                <div class="sidebar-header-top">
+                    <span>目录</span>
+                    <button id="btnHideSidebar" class="btn btn-icon" title="隐藏侧边栏">&#10094;</button>
+                </div>
+                <div id="outlineToolbar" class="outline-toolbar">
+                    <button id="btnOutlineSave" class="btn btn-sm btn-primary">保存目录</button>
+                    <button id="btnOutlineReload" class="btn btn-sm">重载</button>
+                    <button id="btnOutlineAddRoot" class="btn btn-sm">+根目录</button>
+                </div>
+                <div id="outlineEditorPanel" class="outline-editor-panel hidden">
+                    <div class="outline-editor-row">
+                        <input id="outlineEditTitle" type="text" placeholder="目录标题" class="outline-input outline-title-input">
+                        <input id="outlineEditPage" type="number" min="1" placeholder="页码" class="outline-input outline-page-input">
+                        <button id="btnOutlineApplyEdit" class="btn btn-sm">应用</button>
+                        <button id="btnOutlineJump" class="btn btn-sm">跳转</button>
+                    </div>
+                    <div class="outline-editor-row">
+                        <button id="btnOutlineAddBefore" class="btn btn-sm">+前</button>
+                        <button id="btnOutlineAddAfter" class="btn btn-sm">+后</button>
+                        <button id="btnOutlineAddChild" class="btn btn-sm">+子级</button>
+                        <button id="btnOutlineDelete" class="btn btn-sm btn-danger">删除</button>
+                    </div>
+                    <div class="outline-editor-row outline-shift-row">
+                        <span class="outline-shift-label">从当前项起页码整体</span>
+                        <button id="btnOutlineShiftBack" class="btn btn-sm">前移</button>
+                        <input id="outlineShiftStep" type="number" min="1" value="1" class="outline-input outline-shift-input">
+                        <button id="btnOutlineShiftForward" class="btn btn-sm">后移</button>
+                        <span id="outlineShiftHint" class="outline-shift-hint"></span>
+                    </div>
+                    <div class="outline-help-text">提示：点击标题可直接跳页；拖拽左侧手柄可移动目录顺序。</div>
+                </div>
+                <div id="outlineStatus" class="status-text"></div>
             </div>
             <div id="outlineTree"></div>
         </div>

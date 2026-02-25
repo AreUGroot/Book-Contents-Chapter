@@ -28,11 +28,40 @@
         .upload-label { font-size: 15px; color: #666; }
         .upload-label strong { color: #1976d2; }
         .section-title { font-size: 16px; font-weight: 600; color: #555; margin-bottom: 12px; }
+        .path-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 14px; margin-bottom: 16px; }
+        .path-form { display: flex; gap: 8px; align-items: center; }
+        .path-form input {
+            flex: 1; min-width: 0; padding: 10px 12px; border: 1px solid #d0d0d0;
+            border-radius: 6px; font-size: 14px;
+        }
+        .path-form input:focus { outline: none; border-color: #1976d2; box-shadow: 0 0 0 3px rgba(25,118,210,0.12); }
+        .path-form button {
+            padding: 10px 14px; border: 1px solid #1976d2; border-radius: 6px;
+            background: #1976d2; color: #fff; cursor: pointer; font-size: 14px; white-space: nowrap;
+        }
+        .path-form button:hover { background: #1565c0; border-color: #1565c0; }
+        .path-help { margin-top: 8px; color: #666; font-size: 12px; line-height: 1.4; }
+        .path-status { margin-top: 8px; font-size: 12px; min-height: 16px; color: #666; }
+        .path-status.error { color: #d32f2f; }
+        .path-status.success { color: #2e7d32; }
+        @media (max-width: 700px) {
+            .path-form { flex-direction: column; align-items: stretch; }
+            .path-form button { width: 100%; }
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>PDF 阅读器</h1>
+        <div class="path-card">
+            <div class="section-title">按原路径打开（推荐）</div>
+            <form id="openPathForm" class="path-form">
+                <input id="pathInput" type="text" placeholder="粘贴本地 PDF 路径，例如 /Users/xxx/book.pdf 或 file:///Users/xxx/book.pdf">
+                <button type="submit">按原路径打开</button>
+            </form>
+            <div id="pathStatus" class="path-status"></div>
+            <div class="path-help">保存目录和拆分章节会直接作用于该原文件/原目录。拖拽已启用严格模式：若浏览器未提供原路径，将直接报错且不会上传副本到项目目录。</div>
+        </div>
         <form id="uploadForm" action="/upload" method="post" enctype="multipart/form-data">
             <div class="upload-area" id="dropZone">
                 <input type="file" id="fileInput" name="file" accept=".pdf">
@@ -62,16 +91,93 @@
         const dropZone = document.getElementById('dropZone');
         const fileInput = document.getElementById('fileInput');
         const form = document.getElementById('uploadForm');
+        const openPathForm = document.getElementById('openPathForm');
+        const pathInput = document.getElementById('pathInput');
+        const pathStatus = document.getElementById('pathStatus');
+
+        function setPathStatus(text = '', type = '') {
+            pathStatus.textContent = text;
+            pathStatus.className = 'path-status' + (type ? ' ' + type : '');
+        }
+
+        async function openByOriginalPath(pathValue) {
+            setPathStatus('正在按原路径打开...');
+            const resp = await fetch('/open-external', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ path: pathValue }),
+            });
+            const data = await resp.json();
+            if (data.error) throw new Error(data.error);
+            setPathStatus('已识别原路径，正在跳转...', 'success');
+            window.location.href = data.redirect;
+        }
+
+        function firstValidUriLine(text) {
+            if (!text) return '';
+            const lines = text.replace(/\r/g, '\n').split('\n').map(s => s.trim()).filter(Boolean);
+            for (const line of lines) {
+                if (!line.startsWith('#')) return line;
+            }
+            return '';
+        }
+
+        function getDroppedFileUri(dt) {
+            try {
+                const uriList = firstValidUriLine(dt.getData('text/uri-list'));
+                if (uriList && uriList.startsWith('file://')) return uriList;
+            } catch (_) {}
+
+            try {
+                const downloadUrl = dt.getData('DownloadURL');
+                // 形如: application/pdf:filename:file:///Users/xxx/book.pdf
+                if (downloadUrl && downloadUrl.includes('file://')) {
+                    const idx = downloadUrl.indexOf('file://');
+                    if (idx >= 0) return downloadUrl.slice(idx).trim();
+                }
+            } catch (_) {}
+
+            return '';
+        }
+
+        openPathForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const value = pathInput.value.trim();
+            if (!value) {
+                setPathStatus('请先输入本地 PDF 路径', 'error');
+                return;
+            }
+            try {
+                await openByOriginalPath(value);
+            } catch (err) {
+                setPathStatus('打开失败: ' + err.message, 'error');
+            }
+        });
+
         dropZone.addEventListener('click', () => fileInput.click());
         fileInput.addEventListener('change', () => { if (fileInput.files.length) form.submit(); });
         dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
         dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-        dropZone.addEventListener('drop', (e) => {
+        dropZone.addEventListener('drop', async (e) => {
             e.preventDefault(); dropZone.classList.remove('dragover');
-            const files = e.dataTransfer.files;
-            if (files.length && files[0].name.toLowerCase().endsWith('.pdf')) {
-                fileInput.files = files; form.submit();
+            const fileUri = getDroppedFileUri(e.dataTransfer);
+            if (fileUri) {
+                try {
+                    await openByOriginalPath(fileUri);
+                    return;
+                } catch (err) {
+                    setPathStatus('拖拽失败：无法按原路径打开（未上传副本）: ' + err.message, 'error');
+                    return;
+                }
             }
+
+            const files = e.dataTransfer.files || [];
+            if (files.length && files[0] && files[0].name && files[0].name.toLowerCase().endsWith('.pdf')) {
+                setPathStatus('拖拽失败：浏览器未提供该 PDF 的原始路径。请改用“按原路径打开（推荐）”输入框粘贴路径。', 'error');
+                return;
+            }
+
+            setPathStatus('拖拽失败：未识别到可用的 PDF 原路径。请改用“按原路径打开（推荐）”输入框。', 'error');
         });
     </script>
 </body>
