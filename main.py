@@ -139,8 +139,17 @@ def add_bookmarks(input_pdf: str, toc_data: dict, output_pdf: str, page_offset: 
         toc_list.append([level, title, pdf_page])
 
     doc.set_toc(toc_list)
-    doc.save(output_pdf)
-    doc.close()
+
+    input_abs = os.path.abspath(input_pdf)
+    output_abs = os.path.abspath(output_pdf)
+    if input_abs == output_abs:
+        tmp_output = output_pdf + ".tmp"
+        doc.save(tmp_output)
+        doc.close()
+        os.replace(tmp_output, output_pdf)
+    else:
+        doc.save(output_pdf)
+        doc.close()
     print(f"[Step 5] 已添加 {len(toc_list)} 条书签 → {output_pdf}")
 
 
@@ -159,7 +168,7 @@ def main():
   2. Gemini 解析: python main.py parse --toc-pdf toc_extracted.pdf
      → 生成 toc.json，人工检查
   3. 写入书签:    python main.py apply --input book.pdf --toc-json toc.json --page-offset 26
-     → 生成 book_toc.pdf
+     → 默认覆盖原文件（也可用 --output 指定新文件）
         """,
     )
     sub = parser.add_subparsers(dest="command", required=True)
@@ -183,7 +192,7 @@ def main():
     p_apply.add_argument("--toc-json", default="toc.json", help="目录 JSON 路径（默认 toc.json）")
     p_apply.add_argument("--page-offset", type=int, default=0,
                          help="印刷页码→PDF页码偏移量（PDF页码 = 印刷页码 + offset）")
-    p_apply.add_argument("--output", default=None, help="输出 PDF 路径（默认原文件名_toc.pdf）")
+    p_apply.add_argument("--output", default=None, help="输出 PDF 路径（默认覆盖原文件）")
 
     args = parser.parse_args()
 
@@ -221,8 +230,7 @@ def main():
             toc_data = json.load(f)
 
         if args.output is None:
-            base, ext = os.path.splitext(args.input)
-            args.output = f"{base}_toc{ext}"
+            args.output = args.input
 
         add_bookmarks(args.input, toc_data, args.output, args.page_offset)
         print(f"\n完成！输出文件: {args.output}")

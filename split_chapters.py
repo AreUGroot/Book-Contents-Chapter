@@ -153,8 +153,8 @@ def main():
     # 创建输出文件夹
     if args.output_dir is None:
         book_name = os.path.splitext(os.path.basename(args.input))[0]
-        # 去掉常见后缀如 _toc
-        book_name = re.sub(r'_toc$', '', book_name)
+        # 去掉常见后缀如 _toc / _bookmarked
+        book_name = re.sub(r'_(?:toc|bookmarked)$', '', book_name)
         args.output_dir = os.path.join(os.path.dirname(args.input), book_name)
 
     os.makedirs(args.output_dir, exist_ok=True)

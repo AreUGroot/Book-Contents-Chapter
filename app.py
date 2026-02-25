@@ -280,7 +280,7 @@ def api_split_chapters():
 
     # 创建输出文件夹
     book_name = os.path.splitext(os.path.basename(abs_path))[0]
-    book_name = re.sub(r'_toc$', '', book_name)
+    book_name = re.sub(r'_(?:toc|bookmarked)$', '', book_name)
     output_dir = os.path.join(os.path.dirname(abs_path), book_name)
     os.makedirs(output_dir, exist_ok=True)
 

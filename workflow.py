@@ -86,7 +86,7 @@ def step1_generate_toc(input_pdf: str, toc_start: int, toc_end: int,
     base, ext = os.path.splitext(input_pdf)
     toc_pdf = base + "_toc_pages.pdf"
     toc_json = base + "_toc.json"
-    output_pdf = base + "_bookmarked" + ext
+    output_pdf = input_pdf
 
     # ── 1a: 提取目录页 ──
     print("\n" + "─" * 50)
@@ -148,7 +148,7 @@ def step2_split_chapters(input_pdf: str) -> str:
         sys.exit(1)
 
     book_name = os.path.splitext(os.path.basename(input_pdf))[0]
-    book_name = re.sub(r'_bookmarked$', '', book_name)
+    book_name = re.sub(r'_(?:bookmarked|toc)$', '', book_name)
     output_dir = os.path.join(os.path.dirname(input_pdf), book_name)
 
     os.makedirs(output_dir, exist_ok=True)
