@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF 阅读器</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.9.155/pdf.min.mjs" type="module"></script>
+    <link rel="stylesheet" href="/static/reader.css">
+</head>
+<body>
+    <!-- 工具栏 -->
+    <div id="toolbar">
+        <div class="toolbar-left">
+            <a href="/" class="btn btn-back" title="返回文件列表">&#8592; 返回</a>
+            <span class="toolbar-divider"></span>
+            <button id="btnExtractToc" class="btn">选取目录页面</button>
+            <div id="tocExtractPanel" class="hidden">
+                <input id="tocStart" type="number" min="1" placeholder="起始页" class="page-input">
+                <span>-</span>
+                <input id="tocEnd" type="number" min="1" placeholder="结束页" class="page-input">
+                <button id="btnConfirmExtract" class="btn btn-primary">确认提取</button>
+                <a id="linkViewToc" class="hidden toc-link" href="#">查看目录页</a>
+            </div>
+            <span class="toolbar-divider"></span>
+            <button id="btnSplitChapters" class="btn">拆分书籍章节</button>
+        </div>
+        <div class="toolbar-right">
+            <button id="btnZoomOut" class="btn btn-icon" title="缩小">-</button>
+            <select id="zoomSelect" class="zoom-select">
+                <option value="0.5">50%</option>
+                <option value="0.75">75%</option>
+                <option value="1" selected>100%</option>
+                <option value="1.25">125%</option>
+                <option value="1.5">150%</option>
+                <option value="2">200%</option>
+                <option value="3">300%</option>
+            </select>
+            <button id="btnZoomIn" class="btn btn-icon" title="放大">+</button>
+            <span class="toolbar-divider"></span>
+            <span id="pageInfo">0 / 0</span>
+        </div>
+    </div>
+
+    <!-- 主体 -->
+    <div id="main">
+        <!-- 左边栏 -->
+        <div id="sidebar">
+            <div id="sidebarHeader">
+                <span>目录</span>
+                <button id="btnHideSidebar" class="btn btn-icon" title="隐藏侧边栏">&#10094;</button>
+            </div>
+            <div id="outlineTree"></div>
+        </div>
+
+        <!-- 拖拽条 -->
+        <div id="resizer"></div>
+
+        <!-- 显示侧边栏按钮（隐藏时显示） -->
+        <button id="btnShowSidebar" class="btn-show-sidebar hidden" title="显示侧边栏">&#10095;</button>
+
+        <!-- PDF 渲染区域 -->
+        <div id="viewerContainer">
+            <div id="viewer"></div>
+        </div>
+    </div>
+
+    <!-- 目录页查看弹窗 -->
+    <div id="tocModal" class="modal hidden">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <span>目录页预览</span>
+                <button class="btn-close" data-close="tocModal">&times;</button>
+            </div>
+            <div class="modal-toolbar">
+                <button id="btnAutoAddToc" class="btn btn-primary">自动添加目录</button>
+                <div id="offsetPanel" class="hidden">
+                    <label>页码偏移量 (page_offset):</label>
+                    <input id="pageOffset" type="number" value="0" class="page-input">
+                    <button id="btnConfirmAddToc" class="btn btn-primary">确认添加</button>
+                </div>
+                <span id="tocStatus" class="status-text"></span>
+            </div>
+            <div id="tocViewer" class="modal-viewer"></div>
+        </div>
+    </div>
+
+    <!-- 拆分章节弹窗 -->
+    <div id="splitModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span>拆分书籍章节</span>
+                <button class="btn-close" data-close="splitModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="split-actions">
+                    <button id="btnSelectAll" class="btn btn-sm">全选</button>
+                    <button id="btnDeselectAll" class="btn btn-sm">取消全选</button>
+                </div>
+                <div id="chapterList" class="chapter-list"></div>
+                <div class="split-footer">
+                    <button id="btnStartSplit" class="btn btn-primary">开始拆分</button>
+                    <span id="splitStatus" class="status-text"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading overlay -->
+    <div id="loadingOverlay" class="hidden">
+        <div class="spinner"></div>
+        <span id="loadingText">加载中...</span>
+    </div>
+
+    <script>
+        // 传递文件路径给 JS
+        window.PDF_FILE = "{{ filepath }}";
+    </script>
+    <script src="/static/reader.js" type="module"></script>
+</body>
+</html>
