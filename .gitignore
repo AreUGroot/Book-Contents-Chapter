@@ -2,3 +2,5 @@ __pycache__/
 *.pyc
 .DS_Store
 .env
+.venv/
+.pdf_last_opened.json

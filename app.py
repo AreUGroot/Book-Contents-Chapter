@@ -11,6 +11,7 @@ import os
 import re
 import sys
 import tempfile
+from datetime import datetime
 
 import fitz  # pymupdf
 from dotenv import load_dotenv
@@ -27,6 +28,7 @@ app = Flask(__name__)
 
 # 允许浏览的根目录（当前工作目录）
 BASE_DIR = os.getcwd()
+LAST_OPENED_FILE = os.path.join(BASE_DIR, ".pdf_last_opened.json")
 
 
 def _safe_path(filepath):
@@ -37,6 +39,33 @@ def _safe_path(filepath):
     return abs_path
 
 
+def _load_last_opened():
+    """读取最近打开时间记录。"""
+    if not os.path.exists(LAST_OPENED_FILE):
+        return {}
+    try:
+        with open(LAST_OPENED_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
+def _save_last_opened(data):
+    """写入最近打开时间记录。"""
+    tmp_path = LAST_OPENED_FILE + ".tmp"
+    with open(tmp_path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    os.replace(tmp_path, LAST_OPENED_FILE)
+
+
+def _record_last_opened(rel_path):
+    """记录某个 PDF 的最近打开时间。"""
+    data = _load_last_opened()
+    data[rel_path] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    _save_last_opened(data)
+
+
 # ──────────────────────────────────────────────
 # 页面路由
 # ──────────────────────────────────────────────
@@ -44,6 +73,8 @@ def _safe_path(filepath):
 @app.route("/")
 def index():
     """首页：列出当前目录及子目录下的 PDF 文件。"""
+    last_opened_map = _load_last_opened()
+    seen = set()
     pdf_files = []
     for root, dirs, files in os.walk(BASE_DIR):
         # 跳过隐藏目录和常见非目标目录
@@ -52,7 +83,18 @@ def index():
             if f.lower().endswith('.pdf'):
                 full = os.path.join(root, f)
                 rel = os.path.relpath(full, BASE_DIR)
-                pdf_files.append(rel)
+                # 同一路径文件只显示一次（防御性去重）
+                if rel in seen:
+                    continue
+                seen.add(rel)
+                folder_rel = os.path.dirname(rel)
+                pdf_files.append({
+                    "relpath": rel,
+                    "name": os.path.basename(rel),
+                    "folder": folder_rel if folder_rel and folder_rel != "." else "根目录",
+                    "last_opened": last_opened_map.get(rel, "未打开"),
+                })
+    pdf_files.sort(key=lambda x: (x["name"].lower(), x["folder"].lower(), x["relpath"].lower()))
     return render_template("index.html", pdf_files=pdf_files)
 
 
@@ -86,6 +128,7 @@ def reader():
     abs_path = _safe_path(os.path.join(BASE_DIR, filepath))
     if not os.path.isfile(abs_path):
         return f"File not found: {filepath}", 404
+    _record_last_opened(filepath)
     return render_template("reader.html", filepath=filepath)
 
 
